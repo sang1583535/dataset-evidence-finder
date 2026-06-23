@@ -1,6 +1,6 @@
 import streamlit as st
 
-from api_client import search_datasets, get_reference_catalogues
+from api_client import search_datasets
 from components.result_cards import (
     show_dataset_candidates,
     show_paper_evidence,
@@ -59,12 +59,11 @@ with st.sidebar:
     st.caption("Scope: NLP / Computational Linguistics only")
 
 
-tab1, tab2, tab3, tab4 = st.tabs(
+tab1, tab2, tab3 = st.tabs(
     [
         "Matched Results",
         "Dataset Candidates",
         "Paper Evidence",
-        "Reference Catalogues",
     ]
 )
 
@@ -84,7 +83,7 @@ if search_button:
 
                 with tab1:
                     st.caption(
-                        "Matches are created using dataset aliases, normalized matching, and fuzzy matching."
+                        "Matches are grouped by dataset and paper. Each paper can contain multiple evidence sentences."
                     )
                     show_matched_results(result["matched_results"])
 
@@ -93,18 +92,6 @@ if search_button:
 
                 with tab3:
                     show_paper_evidence(result["paper_evidence"])
-
-                with tab4:
-                    catalogues = get_reference_catalogues()
-                    st.subheader("Reference CL/NLP Catalogues")
-
-                    for item in catalogues:
-                        with st.container(border=True):
-                            st.markdown(f"**{item['name']}**")
-                            st.write(item["role"])
-                            st.write(f"Integration status: `{item['integration_status']}`")
-                            st.write(item["note"])
-                            st.markdown(f"[Open catalogue]({item['url']})")
 
             except Exception as e:
                 st.error(f"Search failed: {e}")

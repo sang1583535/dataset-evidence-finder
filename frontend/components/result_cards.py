@@ -63,19 +63,24 @@ def show_matched_results(matches):
 
             col1, col2, col3 = st.columns(3)
             col1.write(f"Source: {item['dataset_source']}")
-            col2.write(f"Matched alias: `{item['matched_alias']}`")
-            col3.write(f"Score: {item['match_score']}")
-
-            st.write(f"Match type: `{item['match_type']}`")
+            col2.write(f"Evidence count: {item.get('evidence_count', 0)}")
+            col3.write(f"Best match score: {item.get('best_match_score', 0.0)}")
 
             if item.get("dataset_url"):
                 st.markdown(f"[Open dataset/source]({item['dataset_url']})")
 
-            if item.get("paper_title"):
-                st.markdown(f"**Paper:** {item['paper_title']}")
+            st.markdown(f"**Paper:** {item['paper_title']}")
+            st.markdown(f"[Open paper]({item['paper_url']})")
 
-            if item.get("paper_url"):
-                st.markdown(f"[Open paper]({item['paper_url']})")
-
-            if item.get("evidence_sentence"):
-                st.info(item["evidence_sentence"])
+            evidences = item.get("evidences", [])
+            with st.expander(f"Show evidence sentences ({len(evidences)})"):
+                for idx, evidence in enumerate(evidences, start=1):
+                    st.markdown(f"**Evidence {idx}:**")
+                    st.write(evidence.get("evidence_sentence", ""))
+                    st.caption(
+                        f"Matched alias: {evidence.get('matched_alias', '')} | "
+                        f"Match type: {evidence.get('match_type', '')} | "
+                        f"Match score: {evidence.get('match_score', 0.0)} | "
+                        f"Evidence score: {evidence.get('evidence_score', 0)} | "
+                        f"Source text: {evidence.get('source_text_type', 'unknown')}"
+                    )

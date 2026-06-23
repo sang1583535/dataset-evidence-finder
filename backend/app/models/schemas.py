@@ -48,8 +48,28 @@ class MatchedResult(BaseModel):
     match_score: float = 0.0
 
 
+class MatchedEvidence(BaseModel):
+    evidence_sentence: str
+    matched_alias: str
+    match_type: str
+    match_score: float = 0.0
+    evidence_score: int = 0
+    source_text_type: str = "unknown"
+
+
+class MatchedPaperResult(BaseModel):
+    dataset_name: str
+    dataset_source: str
+    dataset_url: Optional[str] = None
+    paper_title: str
+    paper_url: str
+    evidences: List[MatchedEvidence]
+    best_match_score: float = 0.0
+    evidence_count: int = 0
+
+
 class SearchResponse(BaseModel):
     query: str
     dataset_candidates: List[DatasetCandidate]
     paper_evidence: List[PaperEvidence]
-    matched_results: List[MatchedResult]
+    matched_results: List[MatchedPaperResult]

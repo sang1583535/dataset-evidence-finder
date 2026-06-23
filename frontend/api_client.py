@@ -27,13 +27,3 @@ def search_datasets(
     response.raise_for_status()
 
     return response.json()
-
-
-def get_reference_catalogues():
-    response = requests.get(
-        f"{BACKEND_URL}/reference-catalogues",
-        timeout=20,
-    )
-    response.raise_for_status()
-
-    return response.json()

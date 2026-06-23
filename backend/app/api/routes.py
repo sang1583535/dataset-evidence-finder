@@ -6,7 +6,6 @@ from app.services.datacite_service import search_datacite_datasets
 from app.services.arxiv_service import search_arxiv_papers
 from app.services.paper_service import extract_evidence_for_papers
 from app.services.matcher import match_datasets_with_evidence
-from app.services.source_catalogue import get_reference_catalogues
 
 router = APIRouter()
 
@@ -54,8 +53,3 @@ def search(request: SearchRequest):
         paper_evidence=evidence,
         matched_results=matches,
     )
-
-
-@router.get("/reference-catalogues")
-def reference_catalogues():
-    return get_reference_catalogues()
