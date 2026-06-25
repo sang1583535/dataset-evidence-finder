@@ -1,3 +1,4 @@
+import requests as _requests
 import streamlit as st
 
 from api_client import search_datasets
@@ -74,6 +75,14 @@ with st.sidebar:
 
     st.divider()
     st.caption("Scope: NLP / Computational Linguistics only")
+
+    with st.expander("Cache Status"):
+        try:
+            resp = _requests.get("http://localhost:8000/api/cache/stats", timeout=3)
+            resp.raise_for_status()
+            st.json(resp.json())
+        except Exception:
+            st.caption("Cache status unavailable.")
 
 
 summary_container = st.container()

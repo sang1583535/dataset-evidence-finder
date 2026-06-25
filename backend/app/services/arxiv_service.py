@@ -6,12 +6,15 @@ import feedparser
 import requests
 
 from app.models.schemas import PaperMetadata
+from app.services.cache_service import make_cache_key, read_json_cache, write_json_cache
 
 
 ARXIV_API_URL = "https://export.arxiv.org/api/query"
 ARXIV_HEADERS = {
     "User-Agent": "NLP-CL-Dataset-Evidence-Finder/1.0 (contact: local-app)",
 }
+
+_ARXIV_TTL = 24 * 3600
 
 
 def extract_arxiv_id(entry_id: str) -> str:
@@ -27,6 +30,12 @@ def extract_arxiv_id(entry_id: str) -> str:
 
 
 def search_arxiv_papers(query: str, max_results: int = 5) -> List[PaperMetadata]:
+    cache_key = make_cache_key(query, str(max_results))
+    cached = read_json_cache("arxiv_search", cache_key, ttl_seconds=_ARXIV_TTL)
+
+    if cached is not None:
+        return [PaperMetadata(**item) for item in cached]
+
     search_query = f'all:"{query}" AND cat:cs.CL'
 
     url = (
@@ -82,5 +91,12 @@ def search_arxiv_papers(query: str, max_results: int = 5) -> List[PaperMetadata]
                 pdf_url=f"https://arxiv.org/pdf/{arxiv_id}",
             )
         )
+
+    if papers:
+        serialized = [
+            p.model_dump() if hasattr(p, "model_dump") else p.dict()
+            for p in papers
+        ]
+        write_json_cache("arxiv_search", cache_key, serialized)
 
     return papers

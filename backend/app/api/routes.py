@@ -1,3 +1,5 @@
+import shutil
+
 from fastapi import APIRouter
 
 from app.models.schemas import SearchRequest, SearchResponse
@@ -8,6 +10,7 @@ from app.services.paper_service import extract_evidence_for_papers
 from app.services.openml_service import search_openml_datasets
 from app.services.elg_service import search_elg_resources
 from app.services.matcher import match_datasets_with_evidence
+from app.services.cache_service import CACHE_ROOT
 
 router = APIRouter()
 
@@ -69,3 +72,33 @@ def search(request: SearchRequest):
         paper_evidence=evidence,
         matched_results=matches,
     )
+
+
+_CACHE_NAMESPACES = ["arxiv_search", "pdf_text"]
+
+
+@router.get("/cache/stats")
+def cache_stats():
+    namespaces = {}
+
+    for ns in _CACHE_NAMESPACES:
+        ns_path = CACHE_ROOT / ns
+        if ns_path.exists():
+            files = list(ns_path.glob("*.json"))
+            size_bytes = sum(f.stat().st_size for f in files)
+            namespaces[ns] = {"files": len(files), "size_bytes": size_bytes}
+        else:
+            namespaces[ns] = {"files": 0, "size_bytes": 0}
+
+    return {
+        "enabled": True,
+        "cache_root": str(CACHE_ROOT.resolve()),
+        "namespaces": namespaces,
+    }
+
+
+@router.delete("/cache")
+def clear_cache():
+    if CACHE_ROOT.exists():
+        shutil.rmtree(CACHE_ROOT)
+    return {"status": "cache_cleared"}
