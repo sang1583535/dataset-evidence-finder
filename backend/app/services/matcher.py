@@ -1,5 +1,7 @@
 from typing import Dict, List, Set, Tuple
 
+import re
+
 from rapidfuzz import fuzz
 
 from app.models.schemas import (
@@ -9,59 +11,50 @@ from app.models.schemas import (
     PaperEvidence,
 )
 from app.services.alias_generator import normalize_text
+from app.services.match_filter import (
+    allow_fuzzy_for_alias,
+    is_dataset_like_alias,
+    is_valid_dataset_evidence,
+)
+
+_FUZZY_THRESHOLD = 90
 
 
 def exact_alias_match(alias: str, sentence: str) -> bool:
     alias_norm = normalize_text(alias)
     sentence_norm = normalize_text(sentence)
-
-    if not alias_norm:
+    if not alias_norm or len(alias_norm) < 4:
         return False
-
-    # Avoid matching very short aliases like "qa", "as", "en"
-    if len(alias_norm) < 4:
-        return False
-
-    return alias_norm in sentence_norm
-
-
-def fuzzy_alias_match(alias: str, sentence: str, threshold: int = 90) -> bool:
-    alias_norm = normalize_text(alias)
-    sentence_norm = normalize_text(sentence)
-
-    if not alias_norm:
-        return False
-
-    if len(alias_norm) < 5:
-        return False
-
-    score = fuzz.partial_ratio(alias_norm, sentence_norm)
-
-    return score >= threshold
+    return bool(re.search(r"\b" + re.escape(alias_norm) + r"\b", sentence_norm))
 
 
 def get_best_match(alias_list: List[str], sentence: str) -> tuple[str, str, float]:
+    # Try exact match on all aliases first
+    for alias in alias_list:
+        if exact_alias_match(alias, sentence):
+            if is_valid_dataset_evidence(sentence, alias, "exact_alias_match"):
+                return alias, "exact_alias_match", 100.0
+
+    # Fuzzy match only on aliases that explicitly permit it
     best_alias = ""
-    best_type = "no_match"
     best_score = 0.0
 
     for alias in alias_list:
-        if exact_alias_match(alias, sentence):
-            return alias, "exact_alias_match", 100.0
-
+        if not allow_fuzzy_for_alias(alias):
+            continue
         alias_norm = normalize_text(alias)
         sentence_norm = normalize_text(sentence)
+        if len(alias_norm) < 5:
+            continue
+        score = float(fuzz.partial_ratio(alias_norm, sentence_norm))
+        if score > best_score:
+            best_alias = alias
+            best_score = score
 
-        if len(alias_norm) >= 5:
-            score = fuzz.partial_ratio(alias_norm, sentence_norm)
-
-            if score > best_score:
-                best_alias = alias
-                best_type = "fuzzy_alias_match"
-                best_score = float(score)
-
-    if best_score >= 90:
-        return best_alias, best_type, best_score
+    if best_score >= _FUZZY_THRESHOLD and is_valid_dataset_evidence(
+        sentence, best_alias, "fuzzy_alias_match"
+    ):
+        return best_alias, "fuzzy_alias_match", best_score
 
     return "", "no_match", 0.0
 
@@ -74,7 +67,10 @@ def match_datasets_with_evidence(
     grouped_sentences: Dict[Tuple[str, str], Set[str]] = {}
 
     for dataset in datasets:
-        aliases = dataset.aliases or [dataset.name]
+        raw_aliases = dataset.aliases or [dataset.name]
+        aliases = [a for a in raw_aliases if is_dataset_like_alias(a)]
+        if not aliases:
+            continue
 
         for evidence in evidence_items:
             matched_alias, match_type, match_score = get_best_match(
@@ -85,6 +81,7 @@ def match_datasets_with_evidence(
             if match_type == "no_match":
                 continue
 
+            src_type = getattr(evidence, "source_text_type", "unknown") or "unknown"
             key = (dataset.name, evidence.paper_url)
             matched_evidence = MatchedEvidence(
                 evidence_sentence=evidence.evidence_sentence,
@@ -92,8 +89,7 @@ def match_datasets_with_evidence(
                 match_type=match_type,
                 match_score=match_score,
                 evidence_score=getattr(evidence, "score", 0) or 0,
-                source_text_type=getattr(evidence, "source_text_type", "unknown")
-                or "unknown",
+                source_text_type=src_type,
             )
 
             if key not in grouped_results:
@@ -125,19 +121,13 @@ def match_datasets_with_evidence(
 
     for item in matched_results:
         item.evidences.sort(
-            key=lambda x: (
-                x.match_score,
-                x.evidence_score,
-            ),
+            key=lambda x: (x.match_score, x.evidence_score),
             reverse=True,
         )
         item.evidence_count = len(item.evidences)
 
     matched_results.sort(
-        key=lambda x: (
-            x.best_match_score,
-            x.evidence_count,
-        ),
+        key=lambda x: (x.best_match_score, x.evidence_count),
         reverse=True,
     )
 

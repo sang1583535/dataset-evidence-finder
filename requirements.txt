@@ -10,3 +10,6 @@ streamlit
 pandas
 pymupdf
 rapidfuzz
+openml
+elg
+python-dotenv

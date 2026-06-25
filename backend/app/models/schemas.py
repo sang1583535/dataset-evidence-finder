@@ -1,5 +1,13 @@
 from typing import List, Optional
+import os
+
+from dotenv import load_dotenv
 from pydantic import BaseModel
+
+
+load_dotenv()
+
+_DEFAULT_MAX_ALIAS_QUERIES = int(os.environ.get("MAX_ALIAS_QUERIES", "5"))
 
 
 class SearchRequest(BaseModel):
@@ -8,6 +16,10 @@ class SearchRequest(BaseModel):
     max_papers: int = 5
     use_full_text: bool = True
     use_datacite: bool = False
+    use_openml: bool = False
+    use_elg: bool = True
+    use_dataset_aliases_for_paper_search: bool = True
+    max_alias_queries: int = _DEFAULT_MAX_ALIAS_QUERIES
 
 
 class DatasetCandidate(BaseModel):
@@ -73,3 +85,4 @@ class SearchResponse(BaseModel):
     dataset_candidates: List[DatasetCandidate]
     paper_evidence: List[PaperEvidence]
     matched_results: List[MatchedPaperResult]
+    paper_queries: List[str] = []

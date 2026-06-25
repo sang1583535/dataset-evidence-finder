@@ -30,6 +30,12 @@ def generate_dataset_aliases(dataset_name: str) -> list[str]:
         aliases.add(f"{owner} {short_name}")
         aliases.add(f"{owner}/{short_name}")
 
+    # Colon-prefixed style: "ShortName: long descriptive title"
+    if ":" in dataset_name:
+        prefix = dataset_name.split(":", 1)[0].strip()
+        if prefix and " " not in prefix:
+            aliases.add(prefix)
+
     # General variants
     aliases.add(dataset_name.replace("-", " "))
     aliases.add(dataset_name.replace("_", " "))
