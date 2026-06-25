@@ -1,7 +1,9 @@
+import os
+
 import requests
 
 
-BACKEND_URL = "http://localhost:8000/api"
+BACKEND_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000/api")
 
 
 def search_datasets(

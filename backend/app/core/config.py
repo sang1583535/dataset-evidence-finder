@@ -1,3 +1,7 @@
+import os
+
+GROBID_URL = os.getenv("GROBID_URL", "http://localhost:8070")
+
 SUPPORTED_DOMAIN = "NLP / Computational Linguistics"
 
 NLP_CL_KEYWORDS = [

@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+requests
+feedparser
+huggingface_hub
+python-dotenv
+pandas
+pymupdf
+rapidfuzz
+openml
+elg
+beautifulsoup4
+lxml

@@ -78,6 +78,9 @@ def show_paper_evidence(evidence_items: list[dict]) -> None:
                     st.write(f"**{idx}.** {item.get('evidence_sentence', '')}")
                     names = item.get("extracted_dataset_names", [])
                     caption = f"Source: {item.get('source_text_type', 'unknown')}"
+                    section = item.get("section_title")
+                    if section:
+                        caption += f" | Section: {section}"
                     if names:
                         caption += " | Extracted: " + ", ".join(names)
                     st.caption(caption)
@@ -151,6 +154,7 @@ def show_dataset_grouped_matches(matches: list[dict]) -> None:
                                 f"Alias: **{alias}** | "
                                 f"Type: {ev.get('match_type', '')} | "
                                 f"Source: {ev.get('source_text_type', 'unknown')}"
+                                + (f" | Section: {ev['section_title']}" if ev.get("section_title") else "")
                             )
 
 
