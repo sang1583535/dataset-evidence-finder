@@ -2,6 +2,7 @@ import shutil
 
 from fastapi import APIRouter
 
+from app.core.config import GROBID_URL
 from app.models.schemas import SearchRequest, SearchResponse
 from app.services.hf_service import search_huggingface_datasets
 from app.services.datacite_service import search_datacite_datasets
@@ -12,6 +13,7 @@ from app.services.elg_service import search_elg_resources
 from app.services.matcher import match_datasets_with_evidence
 from app.services.cache_service import CACHE_ROOT
 from app.services.query_expansion import build_alias_paper_queries
+from app.services.grobid_service import is_grobid_available
 
 router = APIRouter()
 
@@ -91,7 +93,12 @@ def search(request: SearchRequest):
     )
 
 
-_CACHE_NAMESPACES = ["arxiv_search", "pdf_text"]
+@router.get("/grobid/status")
+def grobid_status():
+    return {"available": is_grobid_available(), "url": GROBID_URL}
+
+
+_CACHE_NAMESPACES = ["arxiv_search", "pdf_text", "grobid_sections"]
 
 
 @router.get("/cache/stats")

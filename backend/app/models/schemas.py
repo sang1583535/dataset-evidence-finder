@@ -46,6 +46,7 @@ class PaperEvidence(BaseModel):
     extracted_dataset_names: List[str] = []
     score: int = 0
     source_text_type: str = "abstract"
+    section_title: Optional[str] = None
 
 
 class MatchedResult(BaseModel):

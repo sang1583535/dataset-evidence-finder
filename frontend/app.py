@@ -26,21 +26,21 @@ with st.sidebar:
 
     query = st.text_input(
         "Research topic",
-        value="machine translation dataset",
+        value="Vietnamese sentiment analysis",
     )
 
     max_datasets = st.slider(
         "Max datasets per source",
         min_value=1,
         max_value=30,
-        value=3,
+        value=10,
     )
 
     max_papers = st.slider(
         "Max arXiv papers",
         min_value=1,
-        max_value=10,
-        value=5,
+        max_value=20,
+        value=10,
     )
 
     use_full_text = st.checkbox(
