@@ -25,30 +25,6 @@ NLP_CL_TERMS = [
 ]
 
 
-def is_nlp_cl_related(name: str, description: str | None = None) -> bool:
-    combined = f"{name} {description or ''}".lower()
-    return any(term in combined for term in NLP_CL_TERMS)
-
-
-def query_matches_dataset(query: str, name: str, description: str | None = None) -> bool:
-    query_terms = [term for term in query.lower().split() if len(term) > 2]
-    combined = f"{name} {description or ''}".lower()
-    return any(term in combined for term in query_terms)
-
-
-def safe_get_openml_description(dataset_id: int) -> str | None:
-    try:
-        dataset = openml.datasets.get_dataset(
-            dataset_id,
-            download_data=False,
-            download_qualities=False,
-            download_features_meta_data=False,
-        )
-        return getattr(dataset, "description", None)
-    except Exception:
-        return None
-
-
 def search_openml_datasets(query: str, limit: int = 10) -> List[DatasetCandidate]:
     candidates = []
 
@@ -60,47 +36,52 @@ def search_openml_datasets(query: str, limit: int = 10) -> List[DatasetCandidate
     if datasets is None or datasets.empty:
         return candidates
 
-    for _, row in datasets.iterrows():
+    query_terms = [t for t in query.lower().split() if len(t) > 2]
+
+    if not query_terms:
+        return candidates
+
+    name_col = datasets["name"].str.lower()
+
+    mask = name_col.apply(
+        lambda n: any(t in n for t in query_terms) and any(term in n for term in NLP_CL_TERMS)
+    )
+    filtered = datasets[mask].copy()
+
+    if filtered.empty:
+        return candidates
+
+    if "NumberOfInstances" in filtered.columns:
+        filtered = filtered.sort_values(
+            "NumberOfInstances", ascending=False, na_position="last"
+        )
+
+    for _, row in filtered.head(limit).iterrows():
         name = str(row.get("name", "")).strip()
-
-        if not name:
-            continue
-
         dataset_id = row.get("did")
 
-        if not dataset_id:
+        if not name or not dataset_id:
             continue
-
-        if not query_matches_dataset(query, name):
-            continue
-
-        description = safe_get_openml_description(int(dataset_id))
-
-        if not is_nlp_cl_related(name, description):
-            continue
-
-        url = f"https://www.openml.org/d/{int(dataset_id)}"
 
         tags = ["OpenML"]
 
-        if row.get("NumberOfInstances") is not None:
-            tags.append(f"instances:{row.get('NumberOfInstances')}")
+        n_instances = row.get("NumberOfInstances")
+        n_features = row.get("NumberOfFeatures")
 
-        if row.get("NumberOfFeatures") is not None:
-            tags.append(f"features:{row.get('NumberOfFeatures')}")
+        if n_instances is not None and str(n_instances) != "nan":
+            tags.append(f"instances:{int(n_instances)}")
+        if n_features is not None and str(n_features) != "nan":
+            tags.append(f"features:{int(n_features)}")
 
         candidates.append(
             DatasetCandidate(
                 name=name,
                 source="OpenML",
-                url=url,
-                description=description,
+                url=f"https://www.openml.org/d/{int(dataset_id)}",
+                description=None,
                 tags=tags,
                 aliases=generate_dataset_aliases(name),
             )
         )
-
-        if len(candidates) >= limit:
-            break
 
     return candidates

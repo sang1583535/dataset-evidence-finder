@@ -47,16 +47,19 @@ with st.sidebar:
         help="If enabled, the backend downloads arXiv PDFs and extracts evidence from paper body text.",
     )
 
+    st.subheader("Dataset Sources")
+    st.caption("Hugging Face is always enabled.")
+
     use_elg = st.checkbox(
         "Use European Language Grid",
         value=True,
-        help="EU-connected CL/NLP language resource source.",
+        help="Search EU-connected CL/NLP language resources from ELG.",
     )
 
     use_openml = st.checkbox(
         "Use OpenML",
-        value=True,
-        help="General ML dataset source, filtered for NLP/CL relevance.",
+        value=False,
+        help="Search OpenML as a secondary source. Results are filtered for possible NLP/CL relevance.",
     )
 
     use_datacite = st.checkbox(
@@ -102,6 +105,26 @@ if search_button:
                     show_matched_results(result["matched_results"])
 
                 with tab2:
+                    source_counts = {
+                        "Hugging Face": 0,
+                        "European Language Grid": 0,
+                        "OpenML": 0,
+                        "DataCite": 0,
+                    }
+                    for item in result["dataset_candidates"]:
+                        source = item.get("source")
+                        if source in source_counts:
+                            source_counts[source] += 1
+
+                    col1, col2, col3, col4 = st.columns(4)
+                    col1.metric("Hugging Face", source_counts["Hugging Face"])
+                    col2.metric(
+                        "European Language Grid",
+                        source_counts["European Language Grid"],
+                    )
+                    col3.metric("OpenML", source_counts["OpenML"])
+                    col4.metric("DataCite", source_counts["DataCite"])
+
                     show_dataset_candidates(result["dataset_candidates"])
 
                 with tab3:

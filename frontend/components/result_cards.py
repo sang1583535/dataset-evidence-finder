@@ -8,7 +8,16 @@ def show_dataset_candidates(candidates):
         st.info("No dataset candidates found.")
         return
 
-    sources = sorted(set(item.get("source", "Unknown") for item in candidates))
+    source_order = {
+        "Hugging Face": 0,
+        "European Language Grid": 1,
+        "OpenML": 2,
+        "DataCite": 3,
+    }
+    sources = sorted(
+        set(item.get("source", "Unknown") for item in candidates),
+        key=lambda s: source_order.get(s, 999),
+    )
 
     for source in sources:
         source_items = [
