@@ -50,3 +50,12 @@ When running locally, GROBID is optional. If it is not running at `http://localh
 | `MAX_ALIAS_QUERIES` | `5` | Max alias-based arXiv queries per search |
 
 Copy `.env.example` to `.env` and adjust as needed for local overrides.
+
+## GitHub Actions
+
+This repository includes two GitHub Actions workflows:
+
+- CI: installs backend/frontend dependencies and runs basic checks.
+- Docker Build: verifies that backend and frontend Docker images can build successfully.
+
+The full application is intended to be deployed on Railway or another container platform because it requires running backend, frontend, and GROBID services.
