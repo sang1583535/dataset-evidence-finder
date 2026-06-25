@@ -150,8 +150,6 @@ def show_dataset_grouped_matches(matches: list[dict]) -> None:
                             st.caption(
                                 f"Alias: **{alias}** | "
                                 f"Type: {ev.get('match_type', '')} | "
-                                f"Match score: {ev.get('match_score', 0.0)} | "
-                                # f"Evidence score: {ev.get('evidence_score', 0)} | "
                                 f"Source: {ev.get('source_text_type', 'unknown')}"
                             )
 
