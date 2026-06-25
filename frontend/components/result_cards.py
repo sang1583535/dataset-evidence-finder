@@ -57,22 +57,30 @@ def show_paper_evidence(evidence_items: list[dict]) -> None:
         st.info("No evidence sentences found.")
         return
 
+    groups: dict[str, list[dict]] = defaultdict(list)
+    paper_meta: dict[str, str] = {}
     for item in evidence_items:
+        key = item.get("paper_url") or item.get("paper_title", "")
+        groups[key].append(item)
+        paper_meta[key] = item.get("paper_url", "")
+
+    for key, sentences in groups.items():
+        paper_title = sentences[0].get("paper_title", "")
+        paper_url = paper_meta[key]
         with st.container(border=True):
-            st.markdown(f"**{item.get('paper_title', '')}**")
-            if item.get("paper_url"):
-                st.markdown(f"[Open paper]({item['paper_url']})")
-            st.write(item.get("evidence_sentence", ""))
+            st.markdown(f"**{paper_title}**")
+            if paper_url:
+                st.markdown(f"[Open paper]({paper_url})")
+            st.caption(f"{len(sentences)} evidence sentence(s)")
 
-            # col1, col2 = st.columns(2)
-            # col1.caption(f"Evidence score: {item.get('score', 0)}")
-            # col2.caption(f"Source text: {item.get('source_text_type', 'unknown')}")
-            col = st.columns(1)[0]
-            col.caption(f"Source text: {item.get('source_text_type', 'unknown')}")
-
-            names = item.get("extracted_dataset_names", [])
-            if names:
-                st.caption("Extracted names: " + ", ".join(names))
+            for idx, item in enumerate(sentences, start=1):
+                with st.container(border=True):
+                    st.write(f"**{idx}.** {item.get('evidence_sentence', '')}")
+                    names = item.get("extracted_dataset_names", [])
+                    caption = f"Source: {item.get('source_text_type', 'unknown')}"
+                    if names:
+                        caption += " | Extracted: " + ", ".join(names)
+                    st.caption(caption)
 
 
 def show_dataset_grouped_matches(matches: list[dict]) -> None:
