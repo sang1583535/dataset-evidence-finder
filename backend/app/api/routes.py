@@ -11,6 +11,7 @@ from app.services.openml_service import search_openml_datasets
 from app.services.elg_service import search_elg_resources
 from app.services.matcher import match_datasets_with_evidence
 from app.services.cache_service import CACHE_ROOT
+from app.services.query_expansion import build_alias_paper_queries
 
 router = APIRouter()
 
@@ -51,13 +52,28 @@ def search(request: SearchRequest):
         )
         dataset_candidates.extend(datacite_datasets)
 
-    papers = search_arxiv_papers(
-        query=request.query,
-        max_results=request.max_papers,
-    )
+    if request.use_dataset_aliases_for_paper_search:
+        paper_queries = build_alias_paper_queries(
+            request.query, dataset_candidates, request.max_alias_queries
+        )
+    else:
+        paper_queries = [request.query]
+
+    seen_arxiv_ids: set[str] = set()
+    all_papers = []
+
+    for pq in paper_queries:
+        try:
+            pq_papers = search_arxiv_papers(query=pq, max_results=request.max_papers)
+        except Exception:
+            continue
+        for paper in pq_papers:
+            if paper.arxiv_id not in seen_arxiv_ids:
+                seen_arxiv_ids.add(paper.arxiv_id)
+                all_papers.append(paper)
 
     evidence = extract_evidence_for_papers(
-        papers=papers,
+        papers=all_papers,
         use_full_text=request.use_full_text,
     )
 
@@ -71,6 +87,7 @@ def search(request: SearchRequest):
         dataset_candidates=dataset_candidates,
         paper_evidence=evidence,
         matched_results=matches,
+        paper_queries=paper_queries,
     )
 
 

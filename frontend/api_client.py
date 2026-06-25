@@ -12,6 +12,8 @@ def search_datasets(
     use_datacite: bool,
     use_openml: bool,
     use_elg: bool,
+    use_dataset_aliases_for_paper_search: bool = True,
+    max_alias_queries: int = 3,
 ):
     payload = {
         "query": query,
@@ -21,6 +23,8 @@ def search_datasets(
         "use_datacite": use_datacite,
         "use_openml": use_openml,
         "use_elg": use_elg,
+        "use_dataset_aliases_for_paper_search": use_dataset_aliases_for_paper_search,
+        "max_alias_queries": max_alias_queries,
     }
 
     response = requests.post(

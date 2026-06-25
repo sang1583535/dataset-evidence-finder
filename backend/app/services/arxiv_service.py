@@ -29,6 +29,14 @@ def extract_arxiv_id(entry_id: str) -> str:
     return raw_id.split("v")[0]
 
 
+def _build_search_query(query: str) -> str:
+    terms = [t for t in query.split() if len(t) > 1]
+    if not terms:
+        return f'all:"{query}" AND cat:cs.CL'
+    term_clause = " AND ".join(f"all:{t}" for t in terms)
+    return f"({term_clause}) AND cat:cs.CL"
+
+
 def search_arxiv_papers(query: str, max_results: int = 5) -> List[PaperMetadata]:
     cache_key = make_cache_key(query, str(max_results))
     cached = read_json_cache("arxiv_search", cache_key, ttl_seconds=_ARXIV_TTL)
@@ -36,7 +44,7 @@ def search_arxiv_papers(query: str, max_results: int = 5) -> List[PaperMetadata]
     if cached is not None:
         return [PaperMetadata(**item) for item in cached]
 
-    search_query = f'all:"{query}" AND cat:cs.CL'
+    search_query = _build_search_query(query)
 
     url = (
         f"{ARXIV_API_URL}"

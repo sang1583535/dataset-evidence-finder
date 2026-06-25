@@ -12,3 +12,4 @@ pymupdf
 rapidfuzz
 openml
 elg
+python-dotenv
