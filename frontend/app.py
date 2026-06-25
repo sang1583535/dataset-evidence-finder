@@ -1,11 +1,13 @@
 import streamlit as st
 
 from api_client import search_datasets
+from components.comparison_table import show_comparison_table
 from components.result_cards import (
     show_dataset_candidates,
+    show_dataset_grouped_matches,
     show_paper_evidence,
-    show_matched_results,
 )
+from components.result_summary import show_source_coverage_summary
 
 
 st.set_page_config(
@@ -31,14 +33,14 @@ with st.sidebar:
         "Max datasets per source",
         min_value=1,
         max_value=30,
-        value=5,
+        value=3,
     )
 
     max_papers = st.slider(
         "Max arXiv papers",
         min_value=1,
         max_value=10,
-        value=3,
+        value=5,
     )
 
     use_full_text = st.checkbox(
@@ -58,7 +60,7 @@ with st.sidebar:
 
     use_openml = st.checkbox(
         "Use OpenML",
-        value=False,
+        value=True,
         help="Search OpenML as a secondary source. Results are filtered for possible NLP/CL relevance.",
     )
 
@@ -74,9 +76,12 @@ with st.sidebar:
     st.caption("Scope: NLP / Computational Linguistics only")
 
 
-tab1, tab2, tab3 = st.tabs(
+summary_container = st.container()
+
+tab1, tab2, tab3, tab4 = st.tabs(
     [
-        "Matched Results",
+        "Overview",
+        "Dataset Results",
         "Dataset Candidates",
         "Paper Evidence",
     ]
@@ -98,36 +103,22 @@ if search_button:
                     use_elg=use_elg,
                 )
 
+                with summary_container:
+                    show_source_coverage_summary(result)
+
                 with tab1:
-                    st.caption(
-                        "Matches are grouped by dataset and paper. Each paper can contain multiple evidence sentences."
-                    )
-                    show_matched_results(result["matched_results"])
+                    show_comparison_table(result["matched_results"])
 
                 with tab2:
-                    source_counts = {
-                        "Hugging Face": 0,
-                        "European Language Grid": 0,
-                        "OpenML": 0,
-                        "DataCite": 0,
-                    }
-                    for item in result["dataset_candidates"]:
-                        source = item.get("source")
-                        if source in source_counts:
-                            source_counts[source] += 1
-
-                    col1, col2, col3, col4 = st.columns(4)
-                    col1.metric("Hugging Face", source_counts["Hugging Face"])
-                    col2.metric(
-                        "European Language Grid",
-                        source_counts["European Language Grid"],
+                    st.caption(
+                        "Results are grouped by dataset. Each dataset can contain multiple papers and evidence sentences."
                     )
-                    col3.metric("OpenML", source_counts["OpenML"])
-                    col4.metric("DataCite", source_counts["DataCite"])
-
-                    show_dataset_candidates(result["dataset_candidates"])
+                    show_dataset_grouped_matches(result["matched_results"])
 
                 with tab3:
+                    show_dataset_candidates(result["dataset_candidates"])
+
+                with tab4:
                     show_paper_evidence(result["paper_evidence"])
 
             except Exception as e:
