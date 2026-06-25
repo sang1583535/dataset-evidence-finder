@@ -11,12 +11,12 @@ from components.result_summary import show_source_coverage_summary
 
 
 st.set_page_config(
-    page_title="NLP/CL Dataset Evidence Finder",
+    page_title="Dataset Evidence Finder",
     page_icon="🔎",
     layout="wide",
 )
 
-st.title("NLP/CL Dataset Evidence Finder")
+st.title("Dataset Evidence Finder")
 st.caption(
     "Find NLP/Computational Linguistics dataset candidates and evidence sentences from arXiv papers."
 )
@@ -76,12 +76,9 @@ with st.sidebar:
     st.caption("Scope: NLP / Computational Linguistics only")
 
 
-summary_container = st.container()
-
-tab1, tab2, tab3, tab4 = st.tabs(
+tab1, tab2, tab3 = st.tabs(
     [
         "Overview",
-        "Dataset Results",
         "Dataset Candidates",
         "Paper Evidence",
     ]
@@ -103,22 +100,19 @@ if search_button:
                     use_elg=use_elg,
                 )
 
-                with summary_container:
-                    show_source_coverage_summary(result)
-
                 with tab1:
+                    show_source_coverage_summary(result)
+                    st.divider()
                     show_comparison_table(result["matched_results"])
-
-                with tab2:
                     st.caption(
                         "Results are grouped by dataset. Each dataset can contain multiple papers and evidence sentences."
                     )
                     show_dataset_grouped_matches(result["matched_results"])
 
-                with tab3:
+                with tab2:
                     show_dataset_candidates(result["dataset_candidates"])
 
-                with tab4:
+                with tab3:
                     show_paper_evidence(result["paper_evidence"])
 
             except Exception as e:
