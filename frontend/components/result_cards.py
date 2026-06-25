@@ -8,24 +8,33 @@ def show_dataset_candidates(candidates):
         st.info("No dataset candidates found.")
         return
 
-    for item in candidates:
-        with st.container(border=True):
-            st.markdown(f"**{item['name']}**")
-            st.write(f"Source: {item['source']}")
+    sources = sorted(set(item.get("source", "Unknown") for item in candidates))
 
-            if item.get("url"):
-                st.markdown(f"[Open source page]({item['url']})")
+    for source in sources:
+        source_items = [
+            item for item in candidates
+            if item.get("source", "Unknown") == source
+        ]
 
-            if item.get("description"):
-                st.write(item["description"])
+        with st.expander(f"{source} ({len(source_items)})", expanded=True):
+            for item in source_items:
+                with st.container(border=True):
+                    st.markdown(f"**{item['name']}**")
+                    st.write(f"Source: {item['source']}")
 
-            if item.get("tags"):
-                st.caption("Tags: " + ", ".join(item["tags"][:10]))
+                    if item.get("url"):
+                        st.markdown(f"[Open source page]({item['url']})")
 
-            aliases = item.get("aliases", [])
-            if aliases:
-                with st.expander("Aliases used for matching"):
-                    st.write(aliases)
+                    if item.get("description"):
+                        st.write(item["description"])
+
+                    if item.get("tags"):
+                        st.caption("Tags: " + ", ".join(item["tags"][:10]))
+
+                    aliases = item.get("aliases", [])
+                    if aliases:
+                        with st.expander("Aliases used for matching"):
+                            st.write(aliases)
 
 
 def show_paper_evidence(evidence_items):

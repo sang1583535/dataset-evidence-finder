@@ -29,9 +29,9 @@ with st.sidebar:
 
     max_datasets = st.slider(
         "Max datasets per source",
-        min_value=5,
+        min_value=1,
         max_value=30,
-        value=10,
+        value=5,
     )
 
     max_papers = st.slider(
@@ -47,10 +47,22 @@ with st.sidebar:
         help="If enabled, the backend downloads arXiv PDFs and extracts evidence from paper body text.",
     )
 
+    use_elg = st.checkbox(
+        "Use European Language Grid",
+        value=True,
+        help="EU-connected CL/NLP language resource source.",
+    )
+
+    use_openml = st.checkbox(
+        "Use OpenML",
+        value=True,
+        help="General ML dataset source, filtered for NLP/CL relevance.",
+    )
+
     use_datacite = st.checkbox(
-        "Use DataCite metadata search",
+        "Use DataCite",
         value=False,
-        help="Optional. DataCite can add DOI-based dataset metadata, but it may return broad results.",
+        help="Optional DOI-based dataset metadata source.",
     )
 
     search_button = st.button("Search", type="primary")
@@ -79,6 +91,8 @@ if search_button:
                     max_papers=max_papers,
                     use_full_text=use_full_text,
                     use_datacite=use_datacite,
+                    use_openml=use_openml,
+                    use_elg=use_elg,
                 )
 
                 with tab1:

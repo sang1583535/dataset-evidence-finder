@@ -8,6 +8,8 @@ class SearchRequest(BaseModel):
     max_papers: int = 5
     use_full_text: bool = True
     use_datacite: bool = False
+    use_openml: bool = False
+    use_elg: bool = True
 
 
 class DatasetCandidate(BaseModel):

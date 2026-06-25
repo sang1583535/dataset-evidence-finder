@@ -10,6 +10,8 @@ def search_datasets(
     max_papers: int,
     use_full_text: bool,
     use_datacite: bool,
+    use_openml: bool,
+    use_elg: bool,
 ):
     payload = {
         "query": query,
@@ -17,12 +19,14 @@ def search_datasets(
         "max_papers": max_papers,
         "use_full_text": use_full_text,
         "use_datacite": use_datacite,
+        "use_openml": use_openml,
+        "use_elg": use_elg,
     }
 
     response = requests.post(
         f"{BACKEND_URL}/search",
         json=payload,
-        timeout=120,
+        timeout=180,
     )
     response.raise_for_status()
 
