@@ -1,5 +1,6 @@
 from typing import List
 from urllib.parse import quote
+import time
 
 import feedparser
 import requests
@@ -7,7 +8,10 @@ import requests
 from app.models.schemas import PaperMetadata
 
 
-ARXIV_API_URL = "http://export.arxiv.org/api/query"
+ARXIV_API_URL = "https://export.arxiv.org/api/query"
+ARXIV_HEADERS = {
+    "User-Agent": "NLP-CL-Dataset-Evidence-Finder/1.0 (contact: local-app)",
+}
 
 
 def extract_arxiv_id(entry_id: str) -> str:
@@ -34,7 +38,32 @@ def search_arxiv_papers(query: str, max_results: int = 5) -> List[PaperMetadata]
         f"&sortOrder=descending"
     )
 
-    response = requests.get(url, timeout=30)
+    max_retries = 2
+    response = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            response = requests.get(url, timeout=30, headers=ARXIV_HEADERS)
+        except requests.exceptions.Timeout:
+            if attempt < max_retries:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            return []
+        except requests.exceptions.RequestException:
+            return []
+
+        if response.status_code != 429:
+            break
+
+        if attempt < max_retries:
+            time.sleep(1.5 * (attempt + 1))
+            continue
+
+        return []
+
+    if response is None:
+        return []
+
     response.raise_for_status()
 
     feed = feedparser.parse(response.text)
