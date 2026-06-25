@@ -30,7 +30,7 @@ jobs:
         run: |
           cd backend
           if [ -d tests ]; then
-            pytest -q
+            PYTHONPATH="$PWD" pytest -q
           else
             echo "No backend tests found"
           fi
