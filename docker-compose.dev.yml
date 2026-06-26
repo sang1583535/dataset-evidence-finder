@@ -1,0 +1,32 @@
+services:
+  # Development override for the backend service.
+  # Run with hot-reload and mount source code from the host.
+  backend:
+    build: ./backend
+    container_name: dataset-finder-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+    ports:
+      - "8000:8000"
+    environment:
+      - GROBID_URL=http://grobid:8070
+    volumes:
+      - ./backend:/app
+    depends_on:
+      grobid:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Development override for the frontend service.
+  # Mount source code so Streamlit reflects file changes quickly.
+  frontend:
+    build: ./frontend
+    container_name: dataset-finder-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_API_URL=http://backend:8000/api
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    restart: unless-stopped
