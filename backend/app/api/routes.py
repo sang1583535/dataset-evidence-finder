@@ -217,6 +217,18 @@ def cache_stats():
 
 @router.delete("/cache")
 def clear_cache():
+    removed = 0
     if CACHE_ROOT.exists():
-        shutil.rmtree(CACHE_ROOT)
-    return {"status": "cache_cleared"}
+        # Delete the cache contents rather than CACHE_ROOT itself, because
+        # CACHE_ROOT is often a mounted volume whose mount point cannot be
+        # unlinked (removing it raises and would return a 500).
+        for child in CACHE_ROOT.iterdir():
+            try:
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+                removed += 1
+            except OSError:
+                continue
+    return {"status": "cache_cleared", "removed": removed}

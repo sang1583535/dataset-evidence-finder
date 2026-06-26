@@ -66,3 +66,13 @@ def run_second_pass(
     response.raise_for_status()
 
     return response.json()
+
+
+def clear_cache():
+    response = requests.delete(
+        f"{BACKEND_URL}/cache",
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    return response.json()

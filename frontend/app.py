@@ -1,6 +1,6 @@
 import streamlit as st
 
-from api_client import run_second_pass, search_datasets
+from api_client import clear_cache, run_second_pass, search_datasets
 from components.comparison_table import show_comparison_table
 from components.result_cards import (
     show_dataset_candidates,
@@ -73,6 +73,14 @@ with st.sidebar:
     search_button = st.button("Search", type="primary")
 
     st.divider()
+
+    if st.button("Clear cache", help="Delete all cached search results on the backend and force fresh lookups."):
+        try:
+            clear_cache()
+            st.success("Cache cleared.")
+        except Exception as e:
+            st.error(f"Failed to clear cache: {e}")
+
     st.caption("Scope: NLP / Computational Linguistics only")
 
 
