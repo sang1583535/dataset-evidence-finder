@@ -199,7 +199,7 @@ docker compose run --rm backend pytest -q
 The repository may also include GitHub Actions workflows that automatically run
 basic backend and frontend checks on push or pull request.
 
-## Possible Limitations
+## Limitations
 
 - Dataset names extracted from papers may be noisy.
 - Some papers may not have accessible or parseable PDFs.
@@ -216,8 +216,8 @@ basic backend and frontend checks on push or pull request.
 
 ## Acknowledgements
 
-We thank **Prof. Kan Min-Yen** for providing valuable feedback and guidance during
-the development of this project. We also acknowledge **arXiv**, **Hugging Face**,
+I thank **Prof. Kan Min-Yen** for providing valuable feedback and guidance during
+the development of this project. I also acknowledge **arXiv**, **Hugging Face**,
 **OpenML**, **European Language Grid**, and **DataCite** as important resources for
 dataset and paper discovery. Structured PDF extraction is powered by
 [**GROBID**](https://github.com/kermitt2/grobid). Parts of the software development
