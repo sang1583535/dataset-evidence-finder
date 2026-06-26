@@ -51,10 +51,13 @@ def show_dataset_candidates(candidates: list[dict]) -> None:
 
 
 def show_paper_evidence(evidence_items: list[dict]) -> None:
-    st.subheader("Paper Evidence Sentences")
+    st.subheader("Paper Candidates")
+    st.caption(
+        "Potential papers returned by search, each with extracted evidence sentences."
+    )
 
     if not evidence_items:
-        st.info("No evidence sentences found.")
+        st.info("No paper candidates found.")
         return
 
     groups: dict[str, list[dict]] = defaultdict(list)

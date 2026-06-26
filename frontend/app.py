@@ -80,7 +80,7 @@ tab1, tab2, tab3 = st.tabs(
     [
         "Overview",
         "Dataset Candidates",
-        "Paper Evidence",
+        "Paper Candidates",
     ]
 )
 
@@ -110,9 +110,15 @@ if search_button:
                     show_dataset_grouped_matches(result["matched_results"])
 
                 with tab2:
+                    st.caption(
+                        "Dataset Candidates lists possible datasets gathered from configured sources before cross-paper matching."
+                    )
                     show_dataset_candidates(result["dataset_candidates"])
 
                 with tab3:
+                    st.caption(
+                        "Paper Candidates lists potential arXiv papers and the evidence sentences extracted from each paper."
+                    )
                     show_paper_evidence(result["paper_evidence"])
 
             except Exception as e:
