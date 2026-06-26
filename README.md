@@ -25,6 +25,10 @@ docker compose down
 
 GROBID is used by default for structured, section-aware full-text extraction from arXiv PDFs. If GROBID is unavailable or returns no content for a paper, the backend automatically falls back to PyMuPDF. This is handled entirely in the backend — the frontend has no extraction toggle.
 
+## Second-pass dataset search
+
+After GROBID extracts evidence sentences from papers, the system can extract dataset-like names from high-quality evidence sections such as Datasets, Experiments, Evaluation, and Results. These names are used as a small number of additional dataset-source queries. The second pass searches dataset sources only; it does not search arXiv again. Query limits and caching are used to keep the system efficient.
+
 ## Running Locally (without Docker)
 
 ```bash

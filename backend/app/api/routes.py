@@ -2,8 +2,17 @@ import shutil
 
 from fastapi import APIRouter
 
-from app.core.config import GROBID_URL
-from app.models.schemas import SearchRequest, SearchResponse
+from app.core.config import (
+    GROBID_URL,
+    MAX_SECOND_PASS_DATASET_QUERIES,
+    MAX_SECOND_PASS_RESULTS_PER_SOURCE,
+)
+from app.models.schemas import (
+    SearchRequest,
+    SearchResponse,
+    SecondPassRequest,
+    SecondPassResponse,
+)
 from app.services.hf_service import search_huggingface_datasets
 from app.services.datacite_service import search_datacite_datasets
 from app.services.arxiv_service import search_arxiv_papers
@@ -13,9 +22,51 @@ from app.services.elg_service import search_elg_resources
 from app.services.matcher import match_datasets_with_evidence
 from app.services.cache_service import CACHE_ROOT
 from app.services.query_expansion import build_alias_paper_queries
+from app.services.dataset_expansion import (
+    extract_second_pass_queries_from_evidence,
+    second_pass_dataset_lookup,
+    deduplicate_dataset_candidates,
+)
 from app.services.grobid_service import is_grobid_available
 
 router = APIRouter()
+
+
+def _apply_second_pass(
+    query: str,
+    dataset_candidates: list,
+    evidence: list,
+    use_elg: bool,
+    use_openml: bool,
+    use_datacite: bool,
+):
+    """Run the second-pass dataset lookup and re-match against evidence.
+
+    Returns (queries, merged_candidates, matches). Limits come from config.
+    """
+    queries = extract_second_pass_queries_from_evidence(
+        evidence,
+        max_queries=MAX_SECOND_PASS_DATASET_QUERIES,
+    )
+
+    second_pass_candidates = second_pass_dataset_lookup(
+        queries=queries,
+        use_elg=use_elg,
+        use_openml=use_openml,
+        use_datacite=use_datacite,
+        max_results_per_source=MAX_SECOND_PASS_RESULTS_PER_SOURCE,
+    )
+
+    merged_candidates = deduplicate_dataset_candidates(
+        dataset_candidates + second_pass_candidates
+    )
+
+    matches = match_datasets_with_evidence(
+        datasets=merged_candidates,
+        evidence_items=evidence,
+    )
+
+    return queries, merged_candidates, matches
 
 
 @router.get("/health")
@@ -84,12 +135,47 @@ def search(request: SearchRequest):
         evidence_items=evidence,
     )
 
+    second_pass_queries: list[str] = []
+    if request.use_second_pass_dataset_lookup:
+        second_pass_queries, dataset_candidates, matches = _apply_second_pass(
+            query=request.query,
+            dataset_candidates=dataset_candidates,
+            evidence=evidence,
+            use_elg=request.use_elg,
+            use_openml=request.use_openml,
+            use_datacite=request.use_datacite,
+        )
+
     return SearchResponse(
         query=request.query,
         dataset_candidates=dataset_candidates,
         paper_evidence=evidence,
         matched_results=matches,
         paper_queries=paper_queries,
+        second_pass_dataset_queries=second_pass_queries,
+    )
+
+
+@router.post("/search/second-pass", response_model=SecondPassResponse)
+def search_second_pass(request: SecondPassRequest):
+    """Run only the second-pass dataset lookup against existing evidence.
+
+    This lets the frontend render first-pass results immediately and append
+    the second pass afterwards, instead of waiting for the whole pipeline.
+    """
+    queries, merged_candidates, matches = _apply_second_pass(
+        query=request.query,
+        dataset_candidates=list(request.dataset_candidates),
+        evidence=list(request.paper_evidence),
+        use_elg=request.use_elg,
+        use_openml=request.use_openml,
+        use_datacite=request.use_datacite,
+    )
+
+    return SecondPassResponse(
+        second_pass_dataset_queries=queries,
+        dataset_candidates=merged_candidates,
+        matched_results=matches,
     )
 
 
@@ -98,7 +184,15 @@ def grobid_status():
     return {"available": is_grobid_available(), "url": GROBID_URL}
 
 
-_CACHE_NAMESPACES = ["arxiv_search", "pdf_text", "grobid_sections"]
+_CACHE_NAMESPACES = [
+    "arxiv_search",
+    "pdf_text",
+    "grobid_sections",
+    "hf_search",
+    "elg_search",
+    "openml_search",
+    "datacite_search",
+]
 
 
 @router.get("/cache/stats")

@@ -1,6 +1,6 @@
 import streamlit as st
 
-from api_client import search_datasets
+from api_client import run_second_pass, search_datasets
 from components.comparison_table import show_comparison_table
 from components.result_cards import (
     show_dataset_candidates,
@@ -32,15 +32,15 @@ with st.sidebar:
     max_datasets = st.slider(
         "Max datasets per source",
         min_value=1,
-        max_value=30,
-        value=10,
+        max_value=20,
+        value=5,
     )
 
     max_papers = st.slider(
         "Max arXiv papers",
         min_value=1,
         max_value=20,
-        value=10,
+        value=5,
     )
 
     use_full_text = st.checkbox(
@@ -98,30 +98,77 @@ if search_button:
                     use_datacite=use_datacite,
                     use_openml=use_openml,
                     use_elg=use_elg,
+                    use_second_pass_dataset_lookup=False,
                 )
-
-                with tab1:
-                    show_source_coverage_summary(result)
-                    st.divider()
-                    show_comparison_table(result["matched_results"])
-                    st.caption(
-                        "Results are grouped by dataset. Each dataset can contain multiple papers and evidence sentences."
-                    )
-                    show_dataset_grouped_matches(result["matched_results"])
-
-                with tab2:
-                    st.caption(
-                        "Dataset Candidates lists possible datasets gathered from configured sources before cross-paper matching."
-                    )
-                    show_dataset_candidates(result["dataset_candidates"])
-
-                with tab3:
-                    st.caption(
-                        "Paper Candidates lists potential arXiv papers and the evidence sentences extracted from each paper."
-                    )
-                    show_paper_evidence(result["paper_evidence"])
-
             except Exception as e:
                 st.error(f"Search failed: {e}")
+                st.stop()
+
+        dataset_candidates = result["dataset_candidates"]
+        paper_evidence = result["paper_evidence"]
+        matched_results = result["matched_results"]
+
+        with tab1:
+            summary_box = st.empty()
+            with summary_box.container():
+                show_source_coverage_summary(result)
+            st.divider()
+            matches_box = st.empty()
+            with matches_box.container():
+                show_comparison_table(matched_results)
+                st.caption(
+                    "Results are grouped by dataset. Each dataset can contain multiple papers and evidence sentences."
+                )
+                show_dataset_grouped_matches(matched_results)
+
+        with tab2:
+            candidates_box = st.empty()
+            with candidates_box.container():
+                st.caption(
+                    "Dataset Candidates lists possible datasets gathered from configured sources before cross-paper matching."
+                )
+                show_dataset_candidates(dataset_candidates)
+
+        with tab3:
+            st.caption(
+                "Paper Candidates lists potential arXiv papers and the evidence sentences extracted from each paper."
+            )
+            show_paper_evidence(paper_evidence)
+
+        # Second pass runs after first-pass results are shown, then appends.
+        with st.spinner("Running second-pass dataset search..."):
+            try:
+                second = run_second_pass(
+                    query=query,
+                    dataset_candidates=dataset_candidates,
+                    paper_evidence=paper_evidence,
+                    use_datacite=use_datacite,
+                    use_openml=use_openml,
+                    use_elg=use_elg,
+                )
+            except Exception:
+                second = None
+
+        if second:
+            merged_result = {
+                "dataset_candidates": second["dataset_candidates"],
+                "matched_results": second["matched_results"],
+            }
+
+            with summary_box.container():
+                show_source_coverage_summary(merged_result)
+
+            with matches_box.container():
+                show_comparison_table(second["matched_results"])
+                st.caption(
+                    "Results are grouped by dataset. Each dataset can contain multiple papers and evidence sentences."
+                )
+                show_dataset_grouped_matches(second["matched_results"])
+
+            with candidates_box.container():
+                st.caption(
+                    "Dataset Candidates lists possible datasets gathered from configured sources before cross-paper matching."
+                )
+                show_dataset_candidates(second["dataset_candidates"])
 else:
     st.info("Enter a topic in the sidebar and click Search.")
