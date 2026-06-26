@@ -20,6 +20,7 @@ class SearchRequest(BaseModel):
     use_elg: bool = True
     use_dataset_aliases_for_paper_search: bool = True
     max_alias_queries: int = _DEFAULT_MAX_ALIAS_QUERIES
+    use_second_pass_dataset_lookup: bool = True
 
 
 class DatasetCandidate(BaseModel):
@@ -87,3 +88,19 @@ class SearchResponse(BaseModel):
     paper_evidence: List[PaperEvidence]
     matched_results: List[MatchedPaperResult]
     paper_queries: List[str] = []
+    second_pass_dataset_queries: List[str] = []
+
+
+class SecondPassRequest(BaseModel):
+    query: str
+    dataset_candidates: List[DatasetCandidate] = []
+    paper_evidence: List[PaperEvidence] = []
+    use_datacite: bool = False
+    use_openml: bool = False
+    use_elg: bool = True
+
+
+class SecondPassResponse(BaseModel):
+    second_pass_dataset_queries: List[str] = []
+    dataset_candidates: List[DatasetCandidate] = []
+    matched_results: List[MatchedPaperResult] = []

@@ -1,7 +1,28 @@
 from typing import List
 
 from app.models.schemas import DatasetCandidate
-from app.services.alias_generator import generate_dataset_aliases
+from app.services.alias_generator import generate_dataset_aliases, normalize_text
+
+
+def _significant_query_tokens(query: str) -> list[str]:
+    """Meaningful tokens from the query, ignoring pure numbers/years.
+
+    ELG's catalog search is a loose full-text match, so a query like
+    "VLSP 2016" can return unrelated resources that only share the year
+    "2016" (e.g. "Walenty (2016-04-28)"). We use the non-numeric tokens
+    (e.g. "vlsp") to verify a result is actually relevant.
+    """
+    tokens = normalize_text(query).split()
+    return [t for t in tokens if len(t) >= 3 and not t.isdigit()]
+
+
+def _is_relevant_to_query(name: str, query: str) -> bool:
+    significant = _significant_query_tokens(query)
+    if not significant:
+        # Nothing meaningful to filter on; keep the original behaviour.
+        return True
+    normalized_name = normalize_text(name)
+    return any(token in normalized_name for token in significant)
 
 
 def _safe_get_attr(obj, names: list[str], default=None):
@@ -73,6 +94,9 @@ def search_elg_resources(query: str, limit: int = 10) -> List[DatasetCandidate]:
             name = str(name).strip()
 
             if not name:
+                continue
+
+            if not _is_relevant_to_query(name, query):
                 continue
 
             popularity = _get_popularity_score(entity)
