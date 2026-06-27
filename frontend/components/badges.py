@@ -8,12 +8,15 @@ _BADGE_COLORS: dict[str, tuple[str, str]] = {
     "DataCite":                 ("#6f42c1", "#fff"),
     "abstract":                 ("#6c757d", "#fff"),
     "full_text_pdf":            ("#17a2b8", "#fff"),
+    "datastet":                 ("#e83e8c", "#fff"),
 }
 
 _BADGE_LABELS: dict[str, str] = {
     "Hugging Face":             "HF",
     "European Language Grid":   "ELG",
     "full_text_pdf":            "full text",
+    "grobid_full_text":         "GROBID",
+    "datastet":                 "DataStet",
 }
 
 _DEFAULT_COLOR = ("#343a40", "#fff")

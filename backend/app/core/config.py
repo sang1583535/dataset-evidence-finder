@@ -2,6 +2,14 @@ import os
 
 GROBID_URL = os.getenv("GROBID_URL", "http://localhost:8070")
 
+# DataStet is a GROBID-related service that detects dataset mentions in
+# scientific PDFs. It is used as the first-choice dataset-mention detector;
+# the existing GROBID/rule-based extraction remains the fallback.
+# Local non-Docker default points to localhost; in Docker Compose the backend
+# receives DATASTET_URL=http://datastet:8060.
+DATASTET_URL = os.getenv("DATASTET_URL", "http://localhost:8060")
+USE_DATASTET = os.getenv("USE_DATASTET", "true").lower() == "true"
+
 SUPPORTED_DOMAIN = "NLP / Computational Linguistics"
 
 # Second-pass dataset search limits (kept in config, not user-facing).

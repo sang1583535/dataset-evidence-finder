@@ -21,6 +21,8 @@ class SearchRequest(BaseModel):
     use_dataset_aliases_for_paper_search: bool = True
     max_alias_queries: int = _DEFAULT_MAX_ALIAS_QUERIES
     use_second_pass_dataset_lookup: bool = True
+    max_second_pass_dataset_queries: int = 3
+    max_second_pass_results_per_source: int = 2
 
 
 class DatasetCandidate(BaseModel):
@@ -98,6 +100,8 @@ class SecondPassRequest(BaseModel):
     use_datacite: bool = False
     use_openml: bool = False
     use_elg: bool = True
+    max_second_pass_dataset_queries: int = 3
+    max_second_pass_results_per_source: int = 2
 
 
 class SecondPassResponse(BaseModel):

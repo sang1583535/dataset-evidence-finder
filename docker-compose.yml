@@ -12,6 +12,17 @@ services:
       retries: 5
       start_period: 60s
 
+  # DataStet detects dataset mentions in scientific PDFs. It is optional:
+  # if it is slow to start or unavailable, the backend falls back to the
+  # existing GROBID/rule-based extraction. The DataStet REST API listens on
+  # port 8060 by default; adjust the mapping if your image differs.
+  datastet:
+    image: grobid/datastet:0.8.1
+    container_name: dataset-finder-datastet
+    ports:
+      - "8060:8060"
+    restart: unless-stopped
+
   backend:
     build: ./backend
     container_name: dataset-finder-backend
@@ -19,11 +30,14 @@ services:
       - "8000:8000"
     environment:
       - GROBID_URL=http://grobid:8070
+      - DATASTET_URL=http://datastet:8060
     volumes:
       - ./backend/cache:/app/cache
     depends_on:
       grobid:
         condition: service_healthy
+      datastet:
+        condition: service_started
     restart: unless-stopped
 
   frontend:

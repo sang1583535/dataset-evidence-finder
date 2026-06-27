@@ -3,7 +3,9 @@ import shutil
 from fastapi import APIRouter
 
 from app.core.config import (
+    DATASTET_URL,
     GROBID_URL,
+    USE_DATASTET,
     MAX_SECOND_PASS_DATASET_QUERIES,
     MAX_SECOND_PASS_RESULTS_PER_SOURCE,
 )
@@ -28,6 +30,7 @@ from app.services.dataset_expansion import (
     deduplicate_dataset_candidates,
 )
 from app.services.grobid_service import is_grobid_available
+from app.services.datastet_service import is_datastet_available
 
 router = APIRouter()
 
@@ -39,14 +42,17 @@ def _apply_second_pass(
     use_elg: bool,
     use_openml: bool,
     use_datacite: bool,
+    max_queries: int = MAX_SECOND_PASS_DATASET_QUERIES,
+    max_results_per_source: int = MAX_SECOND_PASS_RESULTS_PER_SOURCE,
 ):
     """Run the second-pass dataset lookup and re-match against evidence.
 
-    Returns (queries, merged_candidates, matches). Limits come from config.
+    Returns (queries, merged_candidates, matches). Limits default to config
+    values but may be overridden per request.
     """
     queries = extract_second_pass_queries_from_evidence(
         evidence,
-        max_queries=MAX_SECOND_PASS_DATASET_QUERIES,
+        max_queries=max_queries,
     )
 
     second_pass_candidates = second_pass_dataset_lookup(
@@ -54,7 +60,7 @@ def _apply_second_pass(
         use_elg=use_elg,
         use_openml=use_openml,
         use_datacite=use_datacite,
-        max_results_per_source=MAX_SECOND_PASS_RESULTS_PER_SOURCE,
+        max_results_per_source=max_results_per_source,
     )
 
     merged_candidates = deduplicate_dataset_candidates(
@@ -144,6 +150,8 @@ def search(request: SearchRequest):
             use_elg=request.use_elg,
             use_openml=request.use_openml,
             use_datacite=request.use_datacite,
+            max_queries=request.max_second_pass_dataset_queries,
+            max_results_per_source=request.max_second_pass_results_per_source,
         )
 
     return SearchResponse(
@@ -170,6 +178,8 @@ def search_second_pass(request: SecondPassRequest):
         use_elg=request.use_elg,
         use_openml=request.use_openml,
         use_datacite=request.use_datacite,
+        max_queries=request.max_second_pass_dataset_queries,
+        max_results_per_source=request.max_second_pass_results_per_source,
     )
 
     return SecondPassResponse(
@@ -184,10 +194,20 @@ def grobid_status():
     return {"available": is_grobid_available(), "url": GROBID_URL}
 
 
+@router.get("/datastet/status")
+def datastet_status():
+    return {
+        "available": is_datastet_available() if USE_DATASTET else False,
+        "url": DATASTET_URL,
+        "enabled": USE_DATASTET,
+    }
+
+
 _CACHE_NAMESPACES = [
     "arxiv_search",
     "pdf_text",
     "grobid_sections",
+    "datastet_mentions",
     "hf_search",
     "elg_search",
     "openml_search",

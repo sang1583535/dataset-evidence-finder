@@ -1,9 +1,101 @@
 from typing import List
 
+from app.core.config import USE_DATASTET
 from app.models.schemas import PaperEvidence, PaperMetadata
+from app.services.datastet_service import (
+    extract_dataset_mentions_with_datastet_from_pdf,
+    merge_extracted_dataset_names,
+)
 from app.services.evidence_extractor import extract_evidence_from_text
 from app.services.fulltext_service import download_pdf, extract_text_from_pdf_bytes
 from app.services.grobid_service import extract_fulltext_sections
+
+
+# Cap on how many DataStet-only evidence items we add per paper when the
+# mention context cannot be matched to an existing evidence sentence.
+_MAX_DATASTET_ONLY_ITEMS = 3
+
+# Score used for DataStet-only evidence items so they are high enough to be
+# displayed/matched without dominating strong rule-based evidence.
+_DATASTET_EVIDENCE_SCORE = 4
+
+
+def _enrich_evidence_with_datastet(
+    evidence_items: List[PaperEvidence],
+    datastet_mentions: List[dict],
+) -> None:
+    """Merge DataStet mention names into overlapping evidence sentences.
+
+    A mention overlaps an evidence sentence when its name (or mention text)
+    appears in the sentence (case-insensitive). Mutates evidence_items in place.
+    """
+    if not datastet_mentions:
+        return
+
+    for ev in evidence_items:
+        sentence_low = (ev.evidence_sentence or "").lower()
+        if not sentence_low:
+            continue
+
+        overlapping_names = [
+            mention["name"]
+            for mention in datastet_mentions
+            if mention.get("name")
+            and (
+                mention["name"].lower() in sentence_low
+                or (mention.get("mention_text") or "").lower() in sentence_low
+            )
+        ]
+
+        if overlapping_names:
+            ev.extracted_dataset_names = merge_extracted_dataset_names(
+                ev.extracted_dataset_names, overlapping_names
+            )
+
+
+def _build_datastet_only_evidence(
+    paper: PaperMetadata,
+    datastet_mentions: List[dict],
+    existing_items: List[PaperEvidence],
+) -> List[PaperEvidence]:
+    """Create a small number of DataStet-only evidence items.
+
+    Only mentions that are not already represented in an existing evidence
+    sentence are added, capped at _MAX_DATASTET_ONLY_ITEMS.
+    """
+    if not datastet_mentions:
+        return []
+
+    already_present: set[str] = set()
+    for ev in existing_items:
+        for name in ev.extracted_dataset_names or []:
+            already_present.add(name.lower())
+
+    new_items: List[PaperEvidence] = []
+    for mention in datastet_mentions:
+        name = (mention.get("name") or "").strip()
+        if not name or name.lower() in already_present:
+            continue
+
+        sentence = mention.get("context") or mention.get("mention_text") or name
+
+        new_items.append(
+            PaperEvidence(
+                paper_title=paper.title,
+                paper_url=paper.url,
+                evidence_sentence=sentence,
+                extracted_dataset_names=[name],
+                score=_DATASTET_EVIDENCE_SCORE,
+                source_text_type="datastet",
+                section_title=mention.get("section_title"),
+            )
+        )
+        already_present.add(name.lower())
+
+        if len(new_items) >= _MAX_DATASTET_ONLY_ITEMS:
+            break
+
+    return new_items
 
 
 def extract_evidence_for_paper(
@@ -26,6 +118,18 @@ def extract_evidence_for_paper(
     if use_full_text:
         pdf_bytes = None
         grobid_ok = False
+
+        # DataStet is tried first as the dataset-mention detector. It is fully
+        # optional: any failure returns [] and the pipeline continues with the
+        # existing GROBID/rule-based extraction below.
+        datastet_mentions: List[dict] = []
+        if USE_DATASTET:
+            try:
+                datastet_mentions = extract_dataset_mentions_with_datastet_from_pdf(
+                    paper.pdf_url
+                )
+            except Exception:
+                datastet_mentions = []
 
         # Download PDF once; reused by both GROBID and PyMuPDF fallback
         try:
@@ -66,6 +170,19 @@ def extract_evidence_for_paper(
                     )
                 except Exception:
                     pass
+
+        # Enrich extracted dataset names using DataStet mentions where the
+        # mention overlaps an evidence sentence, then add a few DataStet-only
+        # items for mentions that could not be attached to a sentence.
+        if datastet_mentions:
+            _enrich_evidence_with_datastet(evidence_items, datastet_mentions)
+            evidence_items.extend(
+                _build_datastet_only_evidence(
+                    paper=paper,
+                    datastet_mentions=datastet_mentions,
+                    existing_items=evidence_items,
+                )
+            )
 
     # Deduplicate and rank
     unique: List[PaperEvidence] = []

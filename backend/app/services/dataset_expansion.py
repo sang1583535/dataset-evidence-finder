@@ -201,19 +201,28 @@ def extract_second_pass_queries_from_evidence(
 ) -> List[str]:
     """Extract a small number of dataset-like queries from paper evidence.
 
+    DataStet mentions are preferred: any evidence produced by DataStet (either
+    DataStet-only items or names enriched onto sentences) is the most reliable
+    dataset signal. When DataStet produced no useful mentions, the function
+    falls back to the existing GROBID/rule-based evidence tiers.
+
     Priority tiers (highest first):
+     -1. datastet evidence (first-choice dataset mentions)
       0. grobid_full_text + useful section + score >= 4
       1. grobid_full_text + useful section
       2. everything else (e.g. abstract evidence)
     """
-    tiers: dict[int, List[str]] = {0: [], 1: [], 2: []}
+    tiers: dict[int, List[str]] = {-1: [], 0: [], 1: [], 2: []}
 
     for ev in evidence_items or []:
+        is_datastet = ev.source_text_type == "datastet"
         is_full = ev.source_text_type == "grobid_full_text"
         useful = is_useful_evidence_section(ev.section_title)
         score = ev.score or 0
 
-        if is_full and useful and score >= 4:
+        if is_datastet:
+            tier = -1
+        elif is_full and useful and score >= 4:
             tier = 0
         elif is_full and useful:
             tier = 1
@@ -228,7 +237,7 @@ def extract_second_pass_queries_from_evidence(
             if is_valid_second_pass_query(name):
                 tiers[tier].append(name)
 
-    ordered: List[str] = tiers[0] + tiers[1] + tiers[2]
+    ordered: List[str] = tiers[-1] + tiers[0] + tiers[1] + tiers[2]
     merged = _merge_prefer_longer(ordered)
 
     return merged[:max_queries]
